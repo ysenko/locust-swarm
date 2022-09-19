@@ -20,6 +20,10 @@ import locust.util.timespan
 from locust_swarm._version import version
 
 
+DEFAULT_LOG_LEVEL = "INFO"
+DEFAULT_LOCUST_FILE = "locustfile.yaml"
+
+
 logging.basicConfig(
     format="%(asctime)s,%(msecs)d %(levelname)-4s [%(filename)s:%(lineno)d] %(message)s",
     datefmt="%Y-%m-%d:%H:%M:%S",
@@ -45,6 +49,7 @@ parser.add_argument(
     "-f",
     "--locustfile",
     type=str,
+    default=DEFAULT_LOCUST_FILE
 )
 parser.add_argument(
     "--headless",
@@ -96,6 +101,7 @@ parser.add_argument(
     "-L",
     type=str,
     dest="loglevel",
+    default=DEFAULT_LOG_LEVEL,
     help="Use DEBUG for tracing issues with load gens etc",
 )
 parser.add_argument("--port", type=str, default="5557")
@@ -329,18 +335,30 @@ def sig_handler(_signo, _frame):
     sys.exit(0)
 
 
-def main():
-    if args.loglevel:
-        logging.getLogger().setLevel(args.loglevel.upper())
+def _get_log_level(args, _):
+    return  args.loglevel.upper()
 
-    locustfile = args.locustfile or "locustfile.py"
 
-    if "/" in locustfile:
+def _configure_logging(level):
+    logging.getLogger().setLevel(level)
+
+
+def _get_locust_file(args, parser):
+    locust_file = args.locustfile
+    if "/" in locust_file:
         parser.error(  #  pylint: disable=not-callable
-            "Locustfile (-f) must be a file in the current directory (I'm lazy and havent fixed support for this yet)"
+            "Locustfile (-f) must be a file in the current directory (I'm lazy and haven't fixed support for this yet)"
         )
 
-    locustfile_filename = os.path.split(locustfile)[1]
+    return locust_file
+
+
+def main():
+    log_level = _get_log_level(args, parser)
+    _configure_logging(log_level)
+
+    locustfile = _get_locust_file(args, parser)
+
     port = int(args.port)
     processes_per_loadgen = args.processes_per_loadgen
     loadgens = args.loadgens
